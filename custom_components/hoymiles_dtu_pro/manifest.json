@@ -1,0 +1,10 @@
+{
+  "domain": "hoymiles_dtu_pro",
+  "name": "Hoymiles DTU-Pro",
+  "documentation": "https://github.com/maeek/ha-hoymiles-dtu-pro",
+  "requirements": ["pymodbus"],
+  "dependencies": [],
+  "codeowners": [],
+  "version": "0.0.1",
+  "iot_class": "local_polling"
+}
