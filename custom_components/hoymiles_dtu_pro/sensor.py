@@ -1,9 +1,55 @@
 import logging
 import datetime
-from homeassistant.components.sensor import (SensorEntity)
-from .const import (PV_TYPES, SENSOR_TYPES)
+import voluptuous as vol
+from homeassistant.components.sensor import (PLATFORM_SCHEMA, SensorEntity)
+import homeassistant.helpers.config_validation as cv
+from homeassistant.const import (CONF_HOST, CONF_NAME, CONF_SCAN_INTERVAL)
+
+from .DTUConnection import DTUConnection
+from .const import (DEFAULT_NAME, DEFAULT_SCAN_INTERVAL, MONITORED_CONDITIONS,
+                    MONITORED_CONDITIONS_PV, CONF_PANELS, SENSOR_TYPES)
 
 _LOGGER = logging.getLogger(__name__)
+
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
+    vol.Required(CONF_HOST):
+    cv.string,
+    vol.Optional(CONF_PANELS, default=0):
+    cv.byte,
+    vol.Optional(CONF_NAME, default=DEFAULT_NAME):
+    cv.string,
+    vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL):
+    cv.time_period
+})
+
+
+def setup_platform(hass, config, add_entities, discovery_info=None):
+    name = config.get(CONF_NAME)
+    host = config.get(CONF_HOST)
+    panels = config.get(CONF_PANELS)
+    scan_interval = config.get(CONF_SCAN_INTERVAL)
+
+    updater = DTUConnection(host, panels, scan_interval)
+    updater.update()
+    _LOGGER.debug("[Hoymiles] Updater data: %s", updater.data)
+
+    if updater.data is None:
+        raise Exception('Invalid configuration for Hoymiles DTU platform')
+    sensors = []
+    for sensor_type in MONITORED_CONDITIONS:
+        sensors.append(
+            HoymilesDTUSensor(hass, name, sensor_type, panels, updater))
+
+    for variable in MONITORED_CONDITIONS_PV:
+        i = 1
+        for i in range(panels):
+            # sensors.append(
+            #     HoymilesPVSensor(
+            #      name, updater.data.microinverter_data[i - 1].serial_number,
+            #      i, updater.data.microinverter_data[i - 1].port_number,
+            #      variable, updater))
+            continue
+    add_entities(sensors, update_before_add=True)
 
 
 class HoymilesDTUSensor(SensorEntity):
@@ -52,6 +98,9 @@ class HoymilesDTUSensor(SensorEntity):
                     self._type][5]
             else:
                 self._state = self._updater.data[self._type]
+        else:
+            return None
+
         return self._state
 
     def update(self):
@@ -60,72 +109,72 @@ class HoymilesDTUSensor(SensorEntity):
                       self._updater.data[self._type])
 
 
-class HoymilesDTUPVSensor(SensorEntity):
+# class HoymilesDTUPVSensor(SensorEntity):
 
-    def __init__(self, name, serial_number, panel_number, panel, sensor_type,
-                 updater):
-        self._hass = hass
-        self._client_name = name + ' ' + serial_number + ' PV ' + str(panel)
-        self._serial_number = serial_number
-        self._panel_number = panel_number
-        self._panel = panel
-        self._type = sensor_type
-        self._updater = updater
-        self._name = PV_TYPES[sensor_type][0]
-        self._state = None
-        self._unit_of_measurement = PV_TYPES[sensor_type][1]
-        self._panels = panels
+#     def __init__(self, name, serial_number, panel_number, panel, sensor_type,
+#                  updater):
+#         self._hass = hass
+#         self._client_name = name + ' ' + serial_number + ' PV ' + str(panel)
+#         self._serial_number = serial_number
+#         self._panel_number = panel_number
+#         self._panel = panel
+#         self._type = sensor_type
+#         self._updater = updater
+#         self._name = PV_TYPES[sensor_type][0]
+#         self._state = None
+#         self._unit_of_measurement = PV_TYPES[sensor_type][1]
+#         self._panels = panels
 
-    @property
-    def name(self):
-        return '{} {}'.format(self._client_name, self._type)
+#     @property
+#     def name(self):
+#         return '{} {}'.format(self._client_name, self._type)
 
-    @property
-    def device_class(self):
-        return PV_TYPES[self._type][2]
+#     @property
+#     def device_class(self):
+#         return PV_TYPES[self._type][2]
 
-    @property
-    def state_class(self):
-        return PV_TYPES[self._type][3]
+#     @property
+#     def state_class(self):
+#         return PV_TYPES[self._type][3]
 
-    @property
-    def last_reset(self):
-        if PV_TYPES[self._type][4]:
-            return datetime.now().replace(hour=0,
-                                          minute=0,
-                                          second=0,
-                                          microsecond=0)
+#     @property
+#     def last_reset(self):
+#         if PV_TYPES[self._type][4]:
+#             return datetime.now().replace(hour=0,
+#                                           minute=0,
+#                                           second=0,
+#                                           microsecond=0)
 
-    @property
-    def unit_of_measurement(self):
-        return self._unit_of_measurement
+#     @property
+#     def unit_of_measurement(self):
+#         return self._unit_of_measurement
 
-    @property
-    def state(self):
-        _LOGGER.debug('[Hoymiles] State updated %s - %s', self._type,
-                      self._updater.data[self._type])
+#     @property
+#     def state(self):
+#         _LOGGER.debug('[Hoymiles] State updated %s - %s', self._type,
+#                       self._updater.data[self._type])
 
-        # if self._updater.data[self._type] is not None:
-        #  if self._type in ['current_power', 'total_energy', 'today_energy']:
-        #       self._state = self._updater.data[self._type] / PV_TYPES[
-        #             self._type][5]
-        #     else:
-        #         self._state = self._updater.data[self._type]
-        # return self._state
-        if (self._updater.data is not None
-                and self._updater.data.total_production > 0):
-            temp = self._updater.data.panels_data[self._panel_number - 1]
-            self._state = temp[PV_TYPES[self._type][0]] / PV_TYPES[
-                self._type][6]
-        elif (self._updater.data is not None
-              and self._updater.data.total_production == 0):
-            if PV_TYPES[self._type][7] == 0:
-                self._state = 0
-            elif PV_TYPES[self._type][7] == 2 and datetime.now().hour == 0:
-                self._state = 0
-        return self._state
+#         # if self._updater.data[self._type] is not None:
+#         #  if self._type in ['current_power', 'total_energy', 'today_energy']:
+#         #       self._state = self._updater.data[self._type] / PV_TYPES[
+#         #             self._type][5]
+#         #     else:
+#         #         self._state = self._updater.data[self._type]
+#         # return self._state
+#         if (self._updater.data is not None
+#                 and self._updater.data.total_production > 0):
+#             temp = self._updater.data.panels_data[self._panel_number - 1]
+#             self._state = temp[PV_TYPES[self._type][0]] / PV_TYPES[
+#                 self._type][6]
+#         elif (self._updater.data is not None
+#               and self._updater.data.total_production == 0):
+#             if PV_TYPES[self._type][7] == 0:
+#                 self._state = 0
+#             elif PV_TYPES[self._type][7] == 2 and datetime.now().hour == 0:
+#                 self._state = 0
+#         return self._state
 
-    def update(self):
-        self._updater.update()
-        _LOGGER.debug('[Hoymiles] Updated %s - %s', self._type,
-                      self._updater.data[self._type])
+#     def update(self):
+#         self._updater.update()
+#         _LOGGER.debug('[Hoymiles] Updated %s - %s', self._type,
+#                       self._updater.data[self._type])

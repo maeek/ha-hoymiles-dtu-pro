@@ -6,6 +6,7 @@ from pymodbus.client.sync import ModbusTcpClient
 
 _LOGGER = logging.getLogger(__name__)
 
+OFFSET_DTU_BASE = 0x2000
 OFFSET_BASE = 0x1000
 OFFSET_STEP = 0x28
 MODBUS_PORT = 502
@@ -55,7 +56,7 @@ class DTUConnection:
             _LOGGER.error("[%s][dtu] Couldn't read registers", self.host)
             return
 
-        rr = self.modbus_client.read_holding_registers(0x2000, 3)
+        rr = self.modbus_client.read_holding_registers(OFFSET_DTU_BASE, 3)
 
         if rr.isError():
             retry += 1
@@ -77,24 +78,24 @@ class DTUConnection:
         if data is None:
             _LOGGER.error("[%s][i-%d] No data from registries arrived",
                           self.host, panel_nr)
-            return
+            return None
 
         panel_data = {
-            'serial_number': str(hex(data[3]).split('x')[-1]),
+            'pv_serial_number': str(hex(data[3]).split('x')[-1]),
             'pv_voltage': data[4] / 10,
             'pv_current': data[5] / 100,
             'grid_voltage': data[6] / 10,
             'grid_freq': data[7] / 100,
             'pv_power': data[8] / 10,
-            'pv_today_prod': data[9],
-            # 'pv_total_prod1': data[10] * 10,
-            # 'pv_total_prod2': data[11],
-            'pv_total_prod': data[10] * 10 + data[11],
-            'temp': unsigned2signed(data[12]) / 10,
-            'operating_status': data[13],
-            'alarm_code': data[14],
-            'alarm_count': data[15],
-            'link_status': data[16],
+            'pv_today_energy': data[9],
+            # 'pv_total_energy1': data[10] * 10,
+            # 'pv_total_energy2': data[11],
+            'pv_total_energy': data[10] * 10 + data[11],
+            'pv_temp': unsigned2signed(data[12]) / 10,
+            'pv_operating_status': data[13],
+            'pv_alarm_code': data[14],
+            'pv_alarm_count': data[15],
+            'pv_link_status': data[16],
         }
 
         return panel_data
@@ -122,18 +123,20 @@ class DTUConnection:
 
         for i in range(self.panels_number):
             data.append(self._normalize_data(self._read_pv_registers(i), i))
-            print(data[i]['serial_number'])
 
         dtu_serial_number = self._read_dtu_registers()
 
         self.modbus_client.close()
 
+        if self.data is None:
+            return None
+
         self.data = {
             'dtu_serial_number': dtu_serial_number['dtu_serial_number'],
-            'today_energy': sum([i['pv_today_prod'] for i in data]),
-            'total_energy': sum([i['pv_total_prod'] for i in data]),
-            'current_power': sum([i['pv_power'] for i in data]),
-            'alarm_flag': any([i['alarm_code'] != 0 for i in data]),
+            'today_energy': sum([i['pv_today_energy'] for i in data]),
+            'total_energy': sum([i['pv_total_energy'] for i in data]),
+            'power': sum([i['pv_power'] for i in data]),
+            'alarm_flag': any([i['pv_alarm_code'] != 0 for i in data]),
             'panels_data': data,
         }
 
