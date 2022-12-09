@@ -9,6 +9,7 @@ from homeassistant.components.sensor import (STATE_CLASS_MEASUREMENT,
                                              STATE_CLASS_TOTAL,
                                              STATE_CLASS_TOTAL_INCREASING)
 
+DOMAIN = "hoymiles_dtu_pro"
 DEFAULT_NAME = 'Hoymiles DTU-Pro'
 CONF_PANELS = "panels"
 DEFAULT_SCAN_INTERVAL = timedelta(minutes=2)

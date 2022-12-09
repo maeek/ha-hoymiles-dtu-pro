@@ -1,5 +1,5 @@
-import logging
 import datetime
+import logging
 import voluptuous as vol
 from homeassistant.components.sensor import (PLATFORM_SCHEMA, SensorEntity)
 import homeassistant.helpers.config_validation as cv
@@ -30,11 +30,8 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     scan_interval = config.get(CONF_SCAN_INTERVAL)
 
     updater = DTUConnection(host, panels, scan_interval)
-    updater.update()
     _LOGGER.debug("[Hoymiles] Updater data: %s", updater.data)
 
-    if updater.data is None:
-        raise Exception('Invalid configuration for Hoymiles DTU platform')
     sensors = []
     for sensor_type in MONITORED_CONDITIONS:
         sensors.append(
@@ -61,6 +58,7 @@ class HoymilesDTUSensor(SensorEntity):
         self._updater = updater
         self._name = SENSOR_TYPES[sensor_type][0]
         self._state = None
+        self._last_state = None
         self._unit_of_measurement = SENSOR_TYPES[sensor_type][1]
         self._panels = panels
 
@@ -90,21 +88,30 @@ class HoymilesDTUSensor(SensorEntity):
 
     @property
     def state(self):
-        _LOGGER.debug('[Hoymiles] State updated %s - %s', self._type,
-                      self._updater.data[self._type])
-        if self._updater.data[self._type] is not None:
-            if self._type in ['current_power', 'total_energy', 'today_energy']:
+        if self._updater.data is not None and self._updater.data[
+                self._type] is not None:
+            _LOGGER.debug('[Hoymiles] State updated %s - %s', self._type,
+                          self._updater.data[self._type])
+            if self._type in ['power', 'total_energy', 'today_energy']:
                 self._state = self._updater.data[self._type] / SENSOR_TYPES[
                     self._type][5]
             else:
                 self._state = self._updater.data[self._type]
+
+            #
+            self._last_state = self._state
+
         else:
-            return None
+            return self._last_state
 
         return self._state
 
     def update(self):
         self._updater.update()
+
+        if self._updater.data is None:
+            return
+
         _LOGGER.debug('[Hoymiles] Updated %s - %s', self._type,
                       self._updater.data[self._type])
 
@@ -155,7 +162,8 @@ class HoymilesDTUSensor(SensorEntity):
 #                       self._updater.data[self._type])
 
 #         # if self._updater.data[self._type] is not None:
-#         #  if self._type in ['current_power', 'total_energy', 'today_energy']:
+#         #  if self._type in [
+# 'current_power', 'total_energy', 'today_energy']:
 #         #       self._state = self._updater.data[self._type] / PV_TYPES[
 #         #             self._type][5]
 #         #     else:
