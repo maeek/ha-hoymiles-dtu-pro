@@ -29,8 +29,10 @@ SENSOR_TYPES = {
         'Energy lifetime', ENERGY_KILO_WATT_HOUR, DEVICE_CLASS_ENERGY,
         STATE_CLASS_TOTAL, False, 1000, 1
     ],
-    # 'alarm_flag':
-    # ['Alarm flag', ' ', 'alarm_flag', STATE_CLASS_MEASUREMENT, False, 1, 0]
+    'alarm_flag':
+    ['Alarm flag', ' ', 'alarm_flag', STATE_CLASS_MEASUREMENT, False, 1, 0],
+    'dtu_serial_number':
+    ['DTU serial number', ' ', 'dtu_serial_number', None, False, None, 0]
 }
 
 PV_TYPES = {

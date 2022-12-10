@@ -1,8 +1,6 @@
 import datetime
 import logging
 import voluptuous as vol
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.components.sensor import (PLATFORM_SCHEMA, SensorEntity)
 import homeassistant.helpers.config_validation as cv
 from homeassistant.const import (CONF_HOST, CONF_NAME, CONF_SCAN_INTERVAL)
@@ -35,8 +33,6 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     panels = config.get(CONF_PANELS)
     scan_interval = config.get(CONF_SCAN_INTERVAL)
 
-    hass.data[DOMAIN] = {}
-
     updater = DTUConnection(host, panels, scan_interval)
     _LOGGER.debug("[Hoymiles] Updater data: %s", updater.data)
 
@@ -46,8 +42,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
             HoymilesDTUSensor(hass, name, sensor_type, panels, host, updater))
 
     for variable in MONITORED_CONDITIONS_PV:
-        i = 1
-        for i in range(panels):
+        for i in range(1, panels):
             # sensors.append(
             #     HoymilesPVSensor(
             #      name, updater.data.microinverter_data[i - 1].serial_number,
@@ -70,6 +65,13 @@ class HoymilesDTUSensor(SensorEntity):
         self._last_state = None
         self._unit_of_measurement = SENSOR_TYPES[sensor_type][1]
         self._panels = panels
+
+        self._device_info = {
+            "identifiers": {(DOMAIN, name)},
+            "name": name,
+            "manufacturer": "Hoymiles",
+            "model": "DTU Pro"
+        }
 
     @property
     def name(self):
@@ -107,7 +109,6 @@ class HoymilesDTUSensor(SensorEntity):
             else:
                 self._state = self._updater.data[self._type]
 
-            #
             self._last_state = self._state
 
         else:
@@ -121,17 +122,6 @@ class HoymilesDTUSensor(SensorEntity):
         return "_".join(
             [DOMAIN, self._host, self._client_name, self._name, "sensor"])
 
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return the device info."""
-        return DeviceInfo(
-            connections={(dr.CONNECTION_NETWORK_MAC, self._host)},
-            identifiers={(DOMAIN, self.unique_id)},
-            name=self._client_name,
-            manufacturer="Hoymiles",
-            model="DTU Pro",
-        )
-
     def update(self):
         self._updater.update()
 
@@ -140,6 +130,10 @@ class HoymilesDTUSensor(SensorEntity):
 
         _LOGGER.debug('[Hoymiles] Updated %s - %s', self._type,
                       self._updater.data[self._type])
+
+    @property
+    def device_info(self):
+        return self._device_info
 
 
 # class HoymilesDTUPVSensor(SensorEntity):

@@ -124,15 +124,15 @@ class DTUConnection:
         for i in range(self.panels_number):
             data.append(self._normalize_data(self._read_pv_registers(i), i))
 
-        dtu_serial_number = self._read_dtu_registers()
+        dtu_device = self._read_dtu_registers()
 
         self.modbus_client.close()
 
-        if self.data is None:
+        if data is None:
             return None
 
         self.data = {
-            'dtu_serial_number': dtu_serial_number['dtu_serial_number'],
+            'dtu_serial_number': dtu_device['dtu_serial_number'],
             'today_energy': sum([i['pv_today_energy'] for i in data]),
             'total_energy': sum([i['pv_total_energy'] for i in data]),
             'power': sum([i['pv_power'] for i in data]),
