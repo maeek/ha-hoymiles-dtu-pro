@@ -14,8 +14,8 @@ DEFAULT_NAME = 'Hoymiles DTU-Pro'
 CONF_PANELS = "panels"
 DEFAULT_SCAN_INTERVAL = timedelta(minutes=2)
 
-# opis, jednostka, urzadzenie, klasa, reset, mnoznik, utrzymanie wartosci
-# (0-brak, 1-tak, 2-do polnocy)
+# description, unit, device, class, reset, multiplier, keep values
+# (0-none, 1-yes, 2-until midnight)
 SENSOR_TYPES = {
     'power': [
         'Power', POWER_WATT, DEVICE_CLASS_POWER, STATE_CLASS_MEASUREMENT,
