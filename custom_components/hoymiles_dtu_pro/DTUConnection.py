@@ -128,7 +128,7 @@ class DTUConnection:
 
         self.modbus_client.close()
 
-        if data is None:
+        if data is None or len(data) != self.panels_number:
             return None
 
         self.data = {

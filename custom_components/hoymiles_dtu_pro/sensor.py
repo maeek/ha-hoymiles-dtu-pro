@@ -7,8 +7,7 @@ from homeassistant.const import (CONF_HOST, CONF_NAME, CONF_SCAN_INTERVAL)
 
 from .DTUConnection import DTUConnection
 from .const import (DEFAULT_NAME, DEFAULT_SCAN_INTERVAL, DOMAIN,
-                    MONITORED_CONDITIONS, MONITORED_CONDITIONS_PV, CONF_PANELS,
-                    SENSOR_TYPES)
+                    MONITORED_CONDITIONS, CONF_PANELS, SENSOR_TYPES)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -41,14 +40,6 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
         sensors.append(
             HoymilesDTUSensor(hass, name, sensor_type, panels, host, updater))
 
-    for variable in MONITORED_CONDITIONS_PV:
-        for i in range(1, panels):
-            # sensors.append(
-            #     HoymilesPVSensor(
-            #      name, updater.data.microinverter_data[i - 1].serial_number,
-            #      i, updater.data.microinverter_data[i - 1].port_number,
-            #      variable, updater))
-            continue
     add_entities(sensors, update_before_add=True)
 
 
