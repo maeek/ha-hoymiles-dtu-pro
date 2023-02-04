@@ -2,7 +2,7 @@
 import logging
 import time
 from homeassistant.util import Throttle
-from pymodbus.client.sync import ModbusTcpClient
+from pymodbus.client import ModbusTcpClient
 
 _LOGGER = logging.getLogger(__name__)
 

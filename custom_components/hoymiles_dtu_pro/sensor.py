@@ -103,7 +103,7 @@ class HoymilesDTUSensor(SensorEntity):
             self._last_state = self._state
 
         else:
-            return self._last_state
+            return None
 
         return self._state
 
